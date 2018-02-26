@@ -1,25 +1,54 @@
 import numpy as np
 import math as m
+
 import matplotlib.pyplot as plt
 
 
 def main():
-    return 1
+    import matplotlib
+    matplotlib.use('TKAgg')
+    import matplotlib.pyplot as plt
+    import matplotlib.animation as animation
 
-DIM = 200
-NUM_ANTS = 50
+    fig = plt.figure()
+
+    b = Board()
+    def scale_b(board):
+        bo = board[:,:,0]
+        bo *= 10 / np.mean(bo)
+        return bo
+    im = plt.imshow(scale_b(b.board), animated=True)
+
+    def animate(i):
+        act1 = np.random.normal(2, 0.8,(NUM_ANTS))
+        act2 = np.random.normal(0.2, 1,(NUM_ANTS))
+        act = np.dstack((act1, act2)).reshape(NUM_ANTS,2)
+        act[:,1] *= 2
+        act[:,1] -= np.mean(act[:,1])/2
+        b.update(act)
+        im.set_array(scale_b(b.board))
+
+        return im,
+
+    ani = animation.FuncAnimation(fig, animate, np.arange(1,DIM**2), interval=25, blit=False)
+    plt.colorbar()
+    plt.show()
+
+
+DIM = 500
+NUM_ANTS = 5000
 
 LOOK_RNG = 1
 LOOK_N = LOOK_RNG ** 2
 
 ## Tile field enums
-TILE_LEN = 2
+TILE_LEN = 1
 T_FOOD = 0
-T_TRAIL = 1
+# T_TRAIL = 1
 
-OBS_LEN = 18
+OBS_LEN = 9
 O_FOOD = 0
-O_Trail = 9
+# O_Trail = 9
 
 ACT_LEN = 2
 A_LIN = 0
@@ -32,7 +61,14 @@ class Board(object):
         self.dim = dim
         self.num_ants = num_ants
 
-        self.board = np.random.normal(50, 2, (dim,dim,TILE_LEN) )
+
+
+
+        self.targets = np.zeros((DIM,DIM,2),dtype=float)
+        for x in range(DIM):
+            for y in range(DIM):
+                self.targets[x][y][0] = Board.calc_targets(x,y)
+        self.board = self.targets.copy()
 
 
 
@@ -40,12 +76,23 @@ class Board(object):
 
         self.Ants  = {i:Ant(_ID=i) for i in range(NUM_ANTS)}
 
+    @staticmethod
+    def calc_targets( x,y):
+        x_1, y_1 = (DIM/3, DIM/2)
+        return 100*(1.0001)**(-(x-x_1)**2-(y-y_1)**2)
+
 
     def update(self, action):
         """
         Args: action: np.ndarray((NUM_ANTS, ACT_LEN), dtype=float)
         """
-        self.board += np.random.normal(10,8,(DIM,DIM,TILE_LEN))
+        # self.board += np.random.normal(10,8,(DIM,DIM,TILE_LEN))
+
+
+        # self.board += (self.targets ** 2) / (15 * self.board + 1)
+        self.board += 0.10*self.targets*(1 - (self.board)/(self.targets+0.0001))
+
+
 
         z = np.zeros((DIM,DIM), dtype=int)
         for (i,ant) in enumerate(self.Ants.values()):
@@ -66,21 +113,20 @@ class Board(object):
             else:
                 ant.food -= 95.0
 
-            (x,y) = (int(ant.x), int(ant.y))
+            # (x,y) = (int(ant.x), int(ant.y))
 
             for k in range(LOOK_RNG):
                 for j in range(LOOK_RNG):
-                    (f,t) = self.board[x+k-1][y+j-1]
+                    f = self.board[x+k-1][y+j-1][0]
+
+                    # (f,t) = self.board[x+k-1][y+j-1]
                     self.obs[i][k*LOOK_RNG + j]            = f
-                    self.obs[i][(k*LOOK_RNG + j + LOOK_N)] = t
+
+                    # self.obs[i][(k*LOOK_RNG + j + LOOK_N)] = t
             z[x][y] = int(ant.theta * 10)
             # z[x][y] = "HI"
 
             # neighbors = np.array([int(ant.x), int(ant.y)]) + offsetTable
-        plt.figure(figsize=(9,9))
-        plt.imshow(self.board[:,:,0]);
-        plt.colorbar()
-        plt.show()
 
 class Ant(object):
     def __init__(self, x_pos=DIM/2, y_pos=DIM/2, _theta=0, _ID=0):
@@ -94,3 +140,6 @@ class Ant(object):
         self.food = 100.0
 
         self.ID = _ID
+
+if __name__ == "__main__":
+    main()
