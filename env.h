@@ -25,5 +25,4 @@ struct Ant {
         int food;
         double x, y;
         int id;
-        
 };

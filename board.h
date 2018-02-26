@@ -6,13 +6,13 @@ const int DIM = 10;
 class Board {
 
 public:
-     Board();
-     ~Board();
-     Obs *update(Action *a);
+    Board();
+    ~Board();
+    Obs *update(Action *a);
 
 private:
-        Tile board[DIM][DIM];
+    Tile board[DIM][DIM];
 
-        Ant  ants        [NUM_ANTS];
-        Obs  observations[NUM_ANTS];
+    Ant  ants        [NUM_ANTS];
+    Obs  observations[NUM_ANTS];
 };
