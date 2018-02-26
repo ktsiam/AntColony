@@ -1,11 +1,13 @@
 import numpy as np
 import math as m
+import matplotlib.pyplot as plt
+
 
 def main():
     return 1
 
-DIM = 20
-NUM_ANTS = 1
+DIM = 200
+NUM_ANTS = 50
 
 LOOK_RNG = 1
 LOOK_N = LOOK_RNG ** 2
@@ -30,7 +32,7 @@ class Board(object):
         self.dim = dim
         self.num_ants = num_ants
 
-        self.board = np.random.normal(50, 12, (dim,dim,TILE_LEN) )
+        self.board = np.random.normal(50, 2, (dim,dim,TILE_LEN) )
 
 
 
@@ -75,7 +77,10 @@ class Board(object):
             # z[x][y] = "HI"
 
             # neighbors = np.array([int(ant.x), int(ant.y)]) + offsetTable
-        print(z)
+        plt.figure(figsize=(9,9))
+        plt.imshow(self.board[:,:,0]);
+        plt.colorbar()
+        plt.show()
 
 class Ant(object):
     def __init__(self, x_pos=DIM/2, y_pos=DIM/2, _theta=0, _ID=0):
