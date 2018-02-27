@@ -13,8 +13,8 @@ def main():
     fig = plt.figure()
 
     b = Board()
-    def scale_b(board):
-        bo = board[:,:,0]
+    def scale_b(food):
+        bo = food
         bo *= 10 / np.mean(bo)
         return bo
     im = plt.imshow(scale_b(b.board), animated=True)
@@ -26,7 +26,7 @@ def main():
         act[:,1] *= 2
         act[:,1] -= np.mean(act[:,1])/2
         b.update(act)
-        im.set_array(scale_b(b.board))
+        im.set_array(scale_b(b.food))
 
         return im,
 
@@ -64,11 +64,11 @@ class Board(object):
 
 
 
-        self.targets = np.zeros((DIM,DIM,2),dtype=float)
+        self.targets = np.zeros((DIM,DIM),dtype=float)
         for x in range(DIM):
             for y in range(DIM):
-                self.targets[x][y][0] = Board.calc_targets(x,y)
-        self.board = self.targets.copy()
+                self.targets[x][y] = Board.calc_targets(x,y)
+        self.food = self.targets.copy()
 
 
 
@@ -85,12 +85,13 @@ class Board(object):
     def update(self, action):
         """
         Args: action: np.ndarray((NUM_ANTS, ACT_LEN), dtype=float)
+        actually ints
         """
         # self.board += np.random.normal(10,8,(DIM,DIM,TILE_LEN))
 
 
         # self.board += (self.targets ** 2) / (15 * self.board + 1)
-        self.board += 0.10*self.targets*(1 - (self.board)/(self.targets+0.0001))
+        self.food += 0.10*self.targets*(1 - (self.food)/(self.targets+0.0001))
 
 
 
@@ -103,21 +104,21 @@ class Board(object):
 
             (x,y) = (int(ant.x), int(ant.y))
 
-            tile = self.board[x][y]
+            tile_f = self.food[x][y]
 
-            ant.food += (tile[T_FOOD] / 2)
-            tile[T_FOOD] /= 2
-            if tile[T_FOOD] > 20.0:
-                tile[T_FOOD] -= 5.0
+            ant.food += (tile_f / 2)
+            tile_f /= 2
+            if tile_f > 20.0:
+                tile_f -= 5.0
                 ant.food -= 100.0
             else:
                 ant.food -= 95.0
-
+            self.food[x][y] = tile_f
             # (x,y) = (int(ant.x), int(ant.y))
 
             for k in range(LOOK_RNG):
                 for j in range(LOOK_RNG):
-                    f = self.board[x+k-1][y+j-1][0]
+                    f = self.food[x+k-1][y+j-1]
 
                     # (f,t) = self.board[x+k-1][y+j-1]
                     self.obs[i][k*LOOK_RNG + j]            = f
