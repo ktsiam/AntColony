@@ -17,13 +17,14 @@ def main():
     fig = plt.figure()
 
     b = Board()
-    im = plt.imshow(b.food.copy(), animated=True)
-
+    im = plt.imshow(b.food.copy(), vmin=0, vmax=110, animated=True)
     def animate(i):
+        obs = np.random.random((NUM_ANTS, OBS_LEN))
         for i in range(skip_per_frame):
             act      = np.zeros((NUM_ANTS, ACT_LEN))
-            act[:,1] = np.random.randint(0,3,(NUM_ANTS))
-            b.update(act)
+            act[:,1] = obs.argmax(axis=1)
+            obs = b.update(act)
+
 
         im.set_array(b.food.copy())
 

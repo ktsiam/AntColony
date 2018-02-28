@@ -1,9 +1,9 @@
 import numpy as np
 import math as m
 
-DIM = 6000
+DIM = 600
 INV_DIM = 1 / DIM
-NUM_ANTS = 100
+NUM_ANTS = 50
 
 LOOK_RNG = 1
 LOOK_N = LOOK_RNG ** 2
@@ -32,17 +32,7 @@ class Board(object):
         self.targets = np.zeros((DIM,DIM),dtype=float)
         for x in range(DIM):
             for y in range(DIM):
-                self.targets[x][y] = self.calc_targets(x,y,90)
-
-        self.gen_coord = (3*DIM/4, 2*DIM/(3))
-        for x in range(DIM):
-            for y in range(DIM):
-                self.targets[x][y] += self.calc_targets(x,y,60)
-
-        self.gen_coord = (DIM - (DIM/9), DIM/(9))
-        for x in range(DIM):
-            for y in range(DIM):
-                self.targets[x][y] += self.calc_targets(x,y,70, 3.5)
+                self.targets[x][y] = self.calc_targets(x,y)
 
         start = np.random.normal(0.7, 0.01,(DIM,DIM))
         self.food = self.targets.copy() * start
@@ -53,7 +43,7 @@ class Board(object):
         self.Ants  = {i:Ant(_ID=i) for i in range(NUM_ANTS)}
 
 
-    def calc_targets(self, x,y, strength=100, tightness=1.0):
+    def calc_targets(self, x,y):
         """
         Calculates upper bounds for food per tile using a 2D normal dist
 
@@ -61,13 +51,13 @@ class Board(object):
         """
 
         x_1, y_1 = self.gen_coord
-        exp_const = INV_DIM * 0.035 * tightness
+        exp_const = INV_DIM * 0.025
         exp = exp_const * (-(x-x_1) ** 2 - (y-y_1) ** 2)
         noise = np.random.normal(1, 0.05)
         if noise < 0.3:
             noise = 0.3
 
-        return strength  *  (2 ** exp) * noise
+        return 100  *  (2 ** exp) * noise
 
 
     def growth_food(self, rate=0.10):
@@ -105,7 +95,7 @@ class Board(object):
         Args: action: np.ndarray((NUM_ANTS, ACT_LEN), dtype=float)
         actually ints
         """
-        self.food += self.growth_food(0.0005) # 0.005
+        self.food += self.growth_food(0.005)
 
         for (i,ant) in enumerate(self.Ants.values()):
             dTheta = (action[i][A_ROT] - 1) * m.pi/3  ## action is 0, 1, 2 (l,f,r)
