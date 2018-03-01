@@ -1,9 +1,9 @@
 import numpy as np
 import math as m
 
-DIM = 6000
+DIM = 100
 INV_DIM = 1 / DIM
-NUM_ANTS = 100
+NUM_ANTS = 1
 
 LOOK_RNG = 1
 LOOK_N = LOOK_RNG ** 2
@@ -20,6 +20,9 @@ O_FOOD = 0
 ACT_LEN = 2
 A_LIN = 0
 A_ROT = 1
+
+SPLIT_FOOD = 600
+
 
 class Board(object):
     def __init__(self, dim=DIM, num_ants=NUM_ANTS):
@@ -49,8 +52,8 @@ class Board(object):
 
 
         self.obs   = np.zeros((num_ants, OBS_LEN),dtype=float)
-
-        self.Ants  = {i:Ant(_ID=i) for i in range(NUM_ANTS)}
+        self.id_ant_count = NUM_ANTS
+        self.Ants  = [Ant(_ID=i) for i in range(NUM_ANTS)]
 
 
     def calc_targets(self, x,y, strength=100, tightness=1.0):
@@ -88,6 +91,7 @@ class Board(object):
         obs = np.array([self.food[int(x)][int(y)] for (x,y) in new_coords])
         self.obs[index] = obs
 
+
     def board_bounds(self, ant):
         # ant.x = ((1 + ant.x) % (DIM - 3) - 1)
         # ant.y = ((1 + ant.y) % (DIM - 3) - 1)
@@ -107,16 +111,16 @@ class Board(object):
         """
         self.food += self.growth_food(0.0005) # 0.005
 
-        for (i,ant) in enumerate(self.Ants.values()):
+
+        for (i,ant) in enumerate(self.Ants):
             dTheta = (action[i][A_ROT] - 1) * m.pi/3  ## action is 0, 1, 2 (l,f,r)
             ant.theta = (ant.theta + dTheta) % (2 * m.pi)
             dist = 1
 
-        ## FLOATING PNT Movement System
-            # ant.theta = (ant.theta + action[i][A_ROT]) % (2* m.pi)
             ant.x += dist * m.cos(ant.theta)
             ant.y += dist * m.sin(ant.theta)
 
+            self.board_bounds(ant)
 
             (x,y) = (int(ant.x), int(ant.y))
 
@@ -126,13 +130,35 @@ class Board(object):
             tile_f /= 2
             if tile_f > 20.0:
                 tile_f -= 5.0
-                ant.food -= 100.0
+                ant.food -= 10.0
             else:
-                ant.food -= 95.0
+                ant.food -= 5.0
             self.food[x][y] = tile_f
 
+            # kill ant if it has no food
+
+
+        ant_list = []
+        ## split / kill
+        for (i,ant) in enumerate(self.Ants):
+            if ant.food > 0:
+                ant_list.append(ant)
+                if ant.food > SPLIT_FOOD:
+                    new_ant = Ant(ant.x, ant.y, np.random.uniform(0, m.pi * 2),
+                              _food = ant.food / 2)
+                    ant_list.append(new_ant)
+                    ant.food /= 2.0
+        self.Ants = ant_list
+        NUM_ANTS = len(self.Ants)
+
+        self.obs   = np.zeros((NUM_ANTS, OBS_LEN),dtype=float)
+        # get obs for each ants
+        # ensure ants within board
+        for (i,ant) in enumerate(self.Ants):
             self.board_bounds(ant)
             self.get_obs(i, ant)
+
+
         return self.obs.copy()
 
 
@@ -142,15 +168,16 @@ class Board(object):
             return ang % (2 * m.pi)
 
 class Ant(object):
-    def __init__(self, x_pos=DIM/2, y_pos=DIM/2, _theta=0, _ID=0):
+    def __init__(self, x_pos=DIM/2, y_pos=DIM/2, _theta=0, _ID=0, _food=50):
         self.x = x_pos + np.random.normal(0, DIM/20)
         self.y = y_pos + np.random.normal(0, DIM/20)
         self.theta = _theta # 0 to 2pi
 
 
+
         self.dx = 0
         self.dy = 0
 
-        self.food = 100.0
+        self.food = _food
 
         self.ID = _ID
