@@ -5,6 +5,7 @@ import math as m
 DIM      = 100
 NUM_ANTS = 10
 OBS_LEN  = 3
+ACT_LEN  = 1
 
 class Coord(object): #Coord object
     def __init__(self, _x = 0, _y = 0):
@@ -12,14 +13,13 @@ class Coord(object): #Coord object
         self.y = _y
 
     def __add__(self, c):
-        self.x += c.x
-        self.y += c.y
-
+        return Coord(self.x + c.x, self.y + c.y)
 
         
 class Tile(object): #Tile object
     GROWTH_RATE     = 0.1
     INIT_FOOD_RATIO = 0.5
+    PEAK_NUM        = 3
     PEAK_STRENGTH   = [60, 70, 90]
     PEAK_TIGHTNESS  = [1.0, 3.5, 1.0]
     PEAK_COORD      = [Coord(3*DIM/4, 2*DIM/3), Coord(8*DIM/9, DIM/9),
@@ -28,22 +28,22 @@ class Tile(object): #Tile object
     def __init__(self, x, y):
         
         self.food_cap = 0
-        for i in range(len(PEAK_STRENGTH)):
-            food_cap += set_food_cap(Coord(x, y), PEAK_COORD[i],
-                                     PEAK_STRENGTH[i], PEAK_TIGHTNESS[i])
-        self.food = food_cap * INIT_FOOD_RATIO
+        for i in range(self.PEAK_NUM):
+            self.food_cap += self.set_cap(Coord(x, y),
+                             Tile.PEAK_COORD[i], Tile.PEAK_STRENGTH[i],
+                             Tile.PEAK_TIGHTNESS[i])
+        self.food = self.food_cap * Tile.INIT_FOOD_RATIO
 
     def grow(self):
         reg   = (1 - self.food / max (self.food_cap, 0.000001))
         noise = np.random.normal(1, 0.2)
-        self.food += GROWTH_RATE * noise * reg
+        self.food += Tile.GROWTH_RATE * noise * reg
 
     def get_eaten(self):
         self.food /= 2
         if  self.food > 20.0:
             self.food -= 5
         
-
         
     @staticmethod
     def set_cap(p, _p, strength, tightness):
@@ -69,7 +69,7 @@ class Ant(object): # Ant object
 
     def act(self, action, tiles): 
         # action : 0, 1, 2 (left, front, right)
-        dTheta       = (action[A_ROT] - 1)      *  m.pi / 3
+        dTheta       = (action[Ant.A_ROT] - 1)      *  m.pi / 3
         self.theta   = (dTheta +    self.theta) % (m.pi * 2)
         self.pos.x  += dist * m.cos(self.theta) %  DIM
         self.pos.y  += dist * m.sin(self.theta) %  DIM
@@ -88,7 +88,7 @@ class Ant(object): # Ant object
         return self.food > 0
 
     def is_reproducible(self):
-        return self.food > SPLIT_FOOD
+        return self.food > Ant.SPLIT_FOOD
 
     def observe(self, tiles):
         new_thetas = (self.theta + ROT_ARR) % (2*m.pi)
@@ -98,31 +98,31 @@ class Ant(object): # Ant object
         return obs
     
 class Board(object):
-    def __init__(self, _ant_len = NUM_ANTS, gen_cord = Coord(DIM/4, DIM/3)):
-        self.ant_len = _ant_len
-        self.tiles   = [DIM][DIM]
+    def __init__(self, gen_cord = Coord(DIM/4, DIM/3)):
+        self.tiles = np.zeros((DIM, DIM), dtype=Tile)
+        self.ants  = np.zeros(NUM_ANTS, dtype=Ant)
         
-        self.board = [DIM][DIM]
         for x in range(DIM):
             for y in range(DIM):
-                board[x][y] = Tile(x, y)
+                self.tiles[x][y] = Tile(x, y)
 
-        self.ants = [ANT_NB]
-        for i in range(ANT_NB):
-            ants[i] = Ant()
+        for i in range(len(self.ants)):
+            self.ants[i] = Ant()
         
     def update(self, actions):
         """
-        Args: action: np.ndarray((NUM_ANTS, ACT_LEN), dtype=float)
+        Args: action: np.array((len(ants), ACT_LEN), dtype=float)
         actually ints
         """
-        self.tiles = self.tiles.grow()
+        for x in range(DIM):
+            for y in range(DIM):
+                self.tiles[x][y].grow()
 
-        for ant, action in zip(ants, actions):
-            ant.act(action, self.tiles)
+        for i in range(len(self.ants)):
+            self.ants[i].act(actions[i], self.tiles)
 
         # kill and make ants
-        self.ants     = filtertrue (Ant.is_alive, self.ants)
+        self.ants      = filtertrue (Ant.is_alive, self.ants)
         fat_ants       = filtertrue (Ant.is_reproducible, self.ants)
         self.ants      = filterfalse(Ant.is_reproducible, self.ants)
         fat_ants.food /= 2
@@ -130,10 +130,12 @@ class Board(object):
         for ant in fat_ants:
             ant.theta  = random.uniform(0, 2*m.pi)
         self.ants     += fat_ants
-        
-        observations = [][OBS_LEN]
-        for ant in ants:
+
+        observations = np.zeros((len(self.ants), OBS_LEN), dtype=float)
+        for ant in self.ants:
             observations.append(ant.observe(self.tiles))
             
         return observations
 
+b = Board()
+b.update(np.array((NUM_ANTS, ACT_LEN), dtype=float))
