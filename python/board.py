@@ -5,7 +5,7 @@ import math as m
 DIM      = 100
 NUM_ANTS = 10
 OBS_LEN  = 3
-ACT_LEN  = 1
+ACT_LEN  = 2
 
 class Coord(object): #Coord object
     def __init__(self, _x = 0, _y = 0):
@@ -71,10 +71,10 @@ class Ant(object): # Ant object
         # action : 0, 1, 2 (left, front, right)
         dTheta       = (action[Ant.A_ROT] - 1)      *  m.pi / 3
         self.theta   = (dTheta +    self.theta) % (m.pi * 2)
-        self.pos.x  += dist * m.cos(self.theta) %  DIM
-        self.pos.y  += dist * m.sin(self.theta) %  DIM
-        self.coord.x =          int(self.pos.x)
-        self.coord.y =          int(self.pos.y)
+        self.pos.x  += m.cos(self.theta) %  DIM
+        self.pos.y  += m.sin(self.theta) %  DIM
+        self.coord.x =   int(self.pos.x)
+        self.coord.y =   int(self.pos.y)
 
         # food : ant, square
         self.eat(tiles[self.coord.x][self.coord.y].food)
@@ -100,7 +100,7 @@ class Ant(object): # Ant object
 class Board(object):
     def __init__(self, gen_cord = Coord(DIM/4, DIM/3)):
         self.tiles = np.zeros((DIM, DIM), dtype=Tile)
-        self.ants  = np.zeros(NUM_ANTS, dtype=Ant)
+        self.ants  = []
         
         for x in range(DIM):
             for y in range(DIM):
@@ -122,20 +122,20 @@ class Board(object):
             self.ants[i].act(actions[i], self.tiles)
 
         # kill and make ants
-        self.ants      = filtertrue (Ant.is_alive, self.ants)
-        fat_ants       = filtertrue (Ant.is_reproducible, self.ants)
-        self.ants      = filterfalse(Ant.is_reproducible, self.ants)
-        fat_ants.food /= 2
-        fat_ants      += fat_ants # cloning
-        for ant in fat_ants:
-            ant.theta  = random.uniform(0, 2*m.pi)
-        self.ants     += fat_ants
+
+        new_ants = []
+        for ant in self.ants:
+            if not ant.is_alive:
+                self.ants.remove(ant)
+            elif ant.is_reproducible():
+                ant.food /= 2
+                new_ants.append(ant)
+                ant.theta = random.uniform(0, 2*m.pi)
+
+        self.ants += new_ants
 
         observations = np.zeros((len(self.ants), OBS_LEN), dtype=float)
         for ant in self.ants:
             observations.append(ant.observe(self.tiles))
             
         return observations
-
-b = Board()
-b.update(np.array((NUM_ANTS, ACT_LEN), dtype=float))
