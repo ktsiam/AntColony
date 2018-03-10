@@ -18,12 +18,14 @@ def main():
 
     b = Board()
     im = plt.imshow(b.food.copy(), vmin=0, vmax=110, animated=True)
+
+
     def animate(i):
-        obs = np.random.random((NUM_ANTS, OBS_LEN))
         for i in range(skip_per_frame):
-            act      = np.zeros((NUM_ANTS, ACT_LEN))
-            act[:,1] = obs.argmax(axis=1)
-            obs = b.update(act)
+            # obs = np.random.random((NUM_ANTS, OBS_LEN))
+            act      = np.zeros((len(b.Ants), ACT_LEN), dtype=int)
+            act[:,1] = b.obs.argmax(axis=1)
+            b.update(act)
 
 
         im.set_array(b.food.copy())
@@ -39,4 +41,5 @@ def main():
 if __name__ == "__main__":
 
 
+    obs = np.random.random((NUM_ANTS, OBS_LEN))
     main()

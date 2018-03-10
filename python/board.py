@@ -1,9 +1,9 @@
 import numpy as np
 import math as m
 
-DIM = 100
+DIM = 300
 INV_DIM = 1 / DIM
-NUM_ANTS = 1
+NUM_ANTS = 10
 
 LOOK_RNG = 1
 LOOK_N = LOOK_RNG ** 2
@@ -35,23 +35,23 @@ class Board(object):
         self.targets = np.zeros((DIM,DIM),dtype=float)
         for x in range(DIM):
             for y in range(DIM):
-                self.targets[x][y] = self.calc_targets(x,y,90)
+                self.targets[x][y] = self.calc_targets(x,y,100, 2.0)
 
         self.gen_coord = (3*DIM/4, 2*DIM/(3))
         for x in range(DIM):
             for y in range(DIM):
                 self.targets[x][y] += self.calc_targets(x,y,60)
 
-        self.gen_coord = (DIM - (DIM/9), DIM/(9))
+        self.gen_coord = (DIM - (DIM/9), DIM-DIM/(9))
         for x in range(DIM):
             for y in range(DIM):
-                self.targets[x][y] += self.calc_targets(x,y,70, 3.5)
-
+                self.targets[x][y] += self.calc_targets(x,y,90, 3.5)
+        self.targets[self.targets < 18] = 18.0
         start = np.random.normal(0.7, 0.01,(DIM,DIM))
         self.food = self.targets.copy() * start
 
 
-        self.obs   = np.zeros((num_ants, OBS_LEN),dtype=float)
+        self.obs   = np.zeros((NUM_ANTS, OBS_LEN),dtype=float)
         self.id_ant_count = NUM_ANTS
         self.Ants  = [Ant(_ID=i) for i in range(NUM_ANTS)]
 
@@ -88,6 +88,11 @@ class Board(object):
         new_thetas = (ant.theta + self.rot_arr) % (2*m.pi)
 
         new_coords = [ (ant.x + 1.5*m.cos(ang), ant.y + 1.5*m.sin(ang)) for ang in new_thetas]
+        for (x,y) in new_coords:
+            if x > DIM or y > DIM:
+                print("ant: ", index)
+                print(x,y)
+                print(ant.x, ant.y)
         obs = np.array([self.food[int(x)][int(y)] for (x,y) in new_coords])
         self.obs[index] = obs
 
@@ -95,13 +100,13 @@ class Board(object):
     def board_bounds(self, ant):
         # ant.x = ((1 + ant.x) % (DIM - 3) - 1)
         # ant.y = ((1 + ant.y) % (DIM - 3) - 1)
-        if ant.x > (DIM - 2):
-            ant.x -= 10
-        elif ant.x < (2):
+        if ant.x > (DIM - 5):
+            ant.x = DIM - 10
+        elif ant.x < (3):
             ant.x += 10
-        if ant.y > (DIM - 2):
-            ant.y -= 10
-        elif ant.y < (2):
+        if ant.y > (DIM - 5):
+            ant.y = DIM - 10
+        elif ant.y < (3):
             ant.y += 10
 
     def update(self, action):
@@ -109,7 +114,7 @@ class Board(object):
         Args: action: np.ndarray((NUM_ANTS, ACT_LEN), dtype=float)
         actually ints
         """
-        self.food += self.growth_food(0.0005) # 0.005
+        self.food += self.growth_food(0.0003) # 0.005
 
 
         for (i,ant) in enumerate(self.Ants):
@@ -126,8 +131,8 @@ class Board(object):
 
             tile_f = self.food[x][y]
 
-            ant.food += (tile_f / 2)
-            tile_f /= 2
+            ant.food += (tile_f * (0.4))
+            tile_f = tile_f * 0.6
             if tile_f > 20.0:
                 tile_f -= 5.0
                 ant.food -= 10.0
@@ -141,13 +146,17 @@ class Board(object):
         ant_list = []
         ## split / kill
         for (i,ant) in enumerate(self.Ants):
-            if ant.food > 0:
+            if ant.food > 40:
                 ant_list.append(ant)
                 if ant.food > SPLIT_FOOD:
                     new_ant = Ant(ant.x, ant.y, np.random.uniform(0, m.pi * 2),
                               _food = ant.food / 2)
                     ant_list.append(new_ant)
                     ant.food /= 2.0
+            else:
+                (x,y) = (int(ant.x), int(ant.y))
+                self.food[x,y] += ant.food
+
         self.Ants = ant_list
         NUM_ANTS = len(self.Ants)
 
@@ -169,8 +178,8 @@ class Board(object):
 
 class Ant(object):
     def __init__(self, x_pos=DIM/2, y_pos=DIM/2, _theta=0, _ID=0, _food=50):
-        self.x = x_pos + np.random.normal(0, DIM/20)
-        self.y = y_pos + np.random.normal(0, DIM/20)
+        self.x = x_pos + np.random.normal(0, 3)
+        self.y = y_pos + np.random.normal(0, 5)
         self.theta = _theta # 0 to 2pi
 
 
